@@ -41,6 +41,7 @@
 (def keyword->format
   {:edn                  formats/edn
    :json                 formats/json
+   :text                 formats/identity
    :transit-json         formats/transit
    :transit-json-verbose formats/transit})
 
