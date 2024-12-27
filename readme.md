@@ -1,5 +1,6 @@
-
-[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.rutledgepaulv/websocket-fx.svg)](https://clojars.org/org.clojars.rutledgepaulv/websocket-fx)
+_NOTE: this repo was forked from excellent work from this repo:
+`https://github.com/RutledgePaulV/websocket-fx`.  I will happily roll my changes
+into the original if that ends up making sense._
 
 A Clojurescript library for use with re-frame and [websocket-layer](https://github.com/RutledgePaulV/websocket-layer). Adds
 re-frame effect handlers to manage the lifecycle of a websocket (including reconnection) and multiplexing requests, 
@@ -8,7 +9,9 @@ subscriptions, and pushes over an individual socket.
 ### Install
 
 ```clojure
-[org.clojars.rutledgepaulv/websocket-fx "0.1.2"]
+deps.edn:
+tfiala/websocket-fx {:git/url "https://github.com/tfiala/websocket-fx"
+                     :git/sha "02c66711a307fa66087bffed5bad7ff48f2f4834"}
 ```
 
 ### Connecting

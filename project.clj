@@ -1,10 +1,10 @@
-(defproject org.clojars.rutledgepaulv/websocket-fx "0.1.3-SNAPSHOT"
+(defproject tfiala/websocket-fx "0.2.0-tfiala"
 
   :description
   "A re-frame counterpart for websocket-layer"
 
   :url
-  "https://github.com/rutledgepaulv/websocket-fx"
+  "https://github.com/tfiala/websocket-fx"
 
   :license
   {:name "MIT" :url "http://opensource.org/licenses/MIT"}
@@ -14,12 +14,12 @@
    ["snapshots" :clojars]]
 
   :dependencies
-  [[org.clojure/clojure "1.10.0"]
-   [org.clojure/clojurescript "1.10.520"]
-   [haslett "0.1.6"]
-   [org.clojure/core.async "0.4.500"]
-   [com.cognitect/transit-cljs "0.8.256"]
-   [re-frame "0.10.6"]]
+  [[org.clojure/clojure "1.12.0"]
+   [org.clojure/clojurescript "1.11.132"]
+   [haslett "0.2.0"]
+   [org.clojure/core.async "1.7.701"]
+   [com.cognitect/transit-cljs "0.8.280"]
+   [re-frame "1.4.4"]]
 
   :source-paths
   ["src"]
