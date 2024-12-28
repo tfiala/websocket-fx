@@ -129,7 +129,7 @@
              (when-some [incoming (async/<! sink-proxy)]
                (println "ws: received message: " incoming)
                (println "dispatching incoming-ws-message to channel " on-message ", message: " incoming)
-               (rf/dispatch [on-message incoming]))
+               (rf/dispatch [on-message socket-id incoming]))
              (recur))
            (rf/dispatch [::connected socket-id])
            (when (some? on-connect) (rf/dispatch on-connect))))))))
