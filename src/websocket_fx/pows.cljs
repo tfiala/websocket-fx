@@ -94,12 +94,12 @@
      ;; create the websocket
      (let [{:keys [socket in out close-status] :as connect-result}
            (<! (haslett/connect url {:format (keyword->format format)}))]
-       (println "haslett socket created (connect result: " connect-result ")")
+       ;; (println "haslett socket created (connect result: " connect-result ")")
        (swap! CONNECTIONS assoc socket-id connect-result)
 
        ;; wait on close-status channel for disconnection notification
        (go
-         (println "ws: disconnected handler waiting on websocket to close")
+         ;; (println "ws: disconnected handler waiting on websocket to close")
          (when-some [closed (<! close-status)]
            (rf/dispatch [::disconnected socket-id closed])
            (when (some? on-disconnect) (rf/dispatch on-disconnect))))
@@ -107,10 +107,10 @@
        ;; read loop
        (when-not (poll! close-status)
          (go-loop []
-           (println "ws: waiting for incoming messages")
+           ;; (println "ws: waiting for incoming messages")
            (when-some [incoming (<! in)]
-             (println "ws: received message: " incoming)
-             (println "dispatching incoming-ws-message to channel " on-message ", message: " incoming)
+             ;; (println "ws: received message: " incoming)
+             ;; (println "dispatching incoming-ws-message to channel " on-message ", message: " incoming)
              (rf/dispatch [on-message socket-id incoming]))
            (recur))
          (rf/dispatch [::connected socket-id])
@@ -125,10 +125,10 @@
 (rf/reg-fx
  ::ws-message
  (fn [{:keys [socket-id message]}]
-   (println "ws: preparing to send message to socket-id " socket-id)
+   ;; (println "ws: preparing to send message to socket-id " socket-id)
    (if-some [{:keys [out]} (get @CONNECTIONS socket-id)]
      (do
-       (println  "ws: sending message: " message)
+       ;; (println  "ws: sending message: " message)
        (put! out message))
      (.error js/console "Socket with id " socket-id " does not exist."))))
 
