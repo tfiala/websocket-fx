@@ -3,7 +3,7 @@
             [clojure.string :as strings]
             [haslett.format :as formats]
             [haslett.client :as haslett]
-            [cljs.core.async :as async]))
+            [cljs.core.async :refer [<! >! go go-loop poll! put!]]))
 
 (defonce CONNECTIONS (atom {}))
 
@@ -66,7 +66,7 @@
 
 (rf/reg-event-fx
  ::disconnected
- (fn [{:keys [db]} [_ socket-id cause]]
+ (fn [{:keys [db]} [_ socket-id _cause]]
    (let [options (get-in db [::sockets socket-id :options])]
      {:db
       (assoc-in db [::sockets socket-id :status] :reconnecting)
@@ -77,28 +77,8 @@
 
 (rf/reg-event-fx
  ::send-message
- (fn [_ [_ socket-id {:keys [message _timeout] :as command}]]
+ (fn [_ [_ socket-id {:keys [message _timeout]}]]
    {::ws-message {:socket-id socket-id :message message}}))
-
-(comment
-  (rf/reg-event-fx
-   ::request-response
-   (fn [{:keys [db]} [_ socket-id request-id & more]]
-     (let [path    [::sockets socket-id :requests request-id]
-           request (get-in db path)]
-       (cond-> {:db (dissoc-in db path)}
-         (contains? request :on-response)
-         (assoc :dispatch (concatv (:on-response request) more)))))))
-
-(comment
-  (rf/reg-event-fx
-   ::request-timeout
-   (fn [{:keys [db]} [_ socket-id request-id & more]]
-     (let [path    [::sockets socket-id :requests request-id]
-           request (get-in db path)]
-       (cond-> {:db (dissoc-in db path)}
-         (contains? request :on-timeout)
-         (assoc :dispatch (concatv (:on-timeout request) more)))))))
 
 ;;; FX HANDLERS
 
@@ -110,29 +90,31 @@
         :or   {format :edn
                url    (websocket-url)}}
        :options}]
-   (let [sink-proxy (async/chan 100)]
-     (swap! CONNECTIONS assoc socket-id {:sink sink-proxy})
-     (async/go
-       (let [{:keys [socket in out close-status] :as connect-result}
-             (async/<! (haslett/connect url {:format (keyword->format format)}))
-             mult (async/mult in)]
-         (println "haslett socket created (connect result: " connect-result ")")
-         (swap! CONNECTIONS assoc socket-id {:sink sink-proxy :source in  :socket socket})
-         (async/go
-           (println "ws: checking for closed websocket")
-           (when-some [closed (async/<! close-status)]
-             (rf/dispatch [::disconnected socket-id closed])
-             (when (some? on-disconnect) (rf/dispatch on-disconnect))))
-         (when-not (async/poll! close-status)
-           (async/go-loop []
-             (println "ws: waiting for incoming messages")
-             (when-some [incoming (async/<! sink-proxy)]
-               (println "ws: received message: " incoming)
-               (println "dispatching incoming-ws-message to channel " on-message ", message: " incoming)
-               (rf/dispatch [on-message socket-id incoming]))
-             (recur))
-           (rf/dispatch [::connected socket-id])
-           (when (some? on-connect) (rf/dispatch on-connect))))))))
+   (go
+     ;; create the websocket
+     (let [{:keys [socket in out close-status] :as connect-result}
+           (<! (haslett/connect url {:format (keyword->format format)}))]
+       (println "haslett socket created (connect result: " connect-result ")")
+       (swap! CONNECTIONS assoc socket-id connect-result)
+
+       ;; wait on close-status channel for disconnection notification
+       (go
+         (println "ws: disconnected handler waiting on websocket to close")
+         (when-some [closed (<! close-status)]
+           (rf/dispatch [::disconnected socket-id closed])
+           (when (some? on-disconnect) (rf/dispatch on-disconnect))))
+
+       ;; read loop
+       (when-not (poll! close-status)
+         (go-loop []
+           (println "ws: waiting for incoming messages")
+           (when-some [incoming (<! in)]
+             (println "ws: received message: " incoming)
+             (println "dispatching incoming-ws-message to channel " on-message ", message: " incoming)
+             (rf/dispatch [on-message socket-id incoming]))
+           (recur))
+         (rf/dispatch [::connected socket-id])
+         (when (some? on-connect) (rf/dispatch on-connect)))))))
 
 (rf/reg-fx
  ::disconnect
@@ -144,10 +126,10 @@
  ::ws-message
  (fn [{:keys [socket-id message]}]
    (println "ws: preparing to send message to socket-id " socket-id)
-   (if-some [{:keys [sink]} (get @CONNECTIONS socket-id)]
+   (if-some [{:keys [out]} (get @CONNECTIONS socket-id)]
      (do
        (println  "ws: sending message: " message)
-       (async/put! sink message))
+       (put! out message))
      (.error js/console "Socket with id " socket-id " does not exist."))))
 
 ;;; INTROSPECTION
